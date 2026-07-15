@@ -14,7 +14,7 @@ class ConsoleView:
             if choice == "1":
                 self._sample_menu()
             elif choice == "2":
-                print("[주문 (접수/승인/거절)] 준비 중입니다.")
+                self._order_menu()
             elif choice == "3":
                 print("[모니터링] 준비 중입니다.")
             elif choice == "4":
@@ -66,6 +66,67 @@ class ConsoleView:
                 break
             else:
                 print("잘못된 입력입니다. 다시 선택해주세요.")
+
+    def _order_menu(self) -> None:
+        while True:
+            print("\n--- 주문 (접수/승인/거절) ---")
+            print("1. 주문 접수")
+            print("2. 승인/거절 처리")
+            print("0. 이전 메뉴로")
+            choice = input("선택> ").strip()
+
+            if choice == "1":
+                self._create_order()
+            elif choice == "2":
+                self._approve_or_reject_order()
+            elif choice == "0":
+                break
+            else:
+                print("잘못된 입력입니다. 다시 선택해주세요.")
+
+    def _create_order(self) -> None:
+        try:
+            sample_id = input("시료 ID> ").strip()
+            customer_name = input("고객명> ").strip()
+            quantity = int(input("주문 수량> ").strip())
+        except ValueError:
+            print("입력값이 올바르지 않습니다.")
+            return
+
+        try:
+            order = self.controller.order_controller.create_order(sample_id, customer_name, quantity)
+        except ValueError as e:
+            print(f"주문 접수 실패: {e}")
+            return
+
+        print(f"주문이 접수되었습니다: {order.order_id} ({order.status.value})")
+
+    def _approve_or_reject_order(self) -> None:
+        reserved_orders = self.controller.order_controller.list_reserved_orders()
+        if not reserved_orders:
+            print("승인/거절 대기 중인 주문이 없습니다.")
+            return
+
+        print(f"{'주문번호':<20}{'시료ID':<10}{'고객명':<12}{'수량':<8}")
+        for o in reserved_orders:
+            print(f"{o.order_id:<20}{o.sample_id:<10}{o.customer_name:<12}{o.quantity:<8}")
+
+        order_id = input("처리할 주문번호> ").strip()
+        decision = input("승인(a) / 거절(r)> ").strip().lower()
+
+        try:
+            if decision == "a":
+                order = self.controller.order_controller.approve_order(order_id)
+            elif decision == "r":
+                order = self.controller.order_controller.reject_order(order_id)
+            else:
+                print("잘못된 입력입니다.")
+                return
+        except ValueError as e:
+            print(f"처리 실패: {e}")
+            return
+
+        print(f"처리 완료: {order.order_id} -> {order.status.value}")
 
     def _register_sample(self) -> None:
         try:
